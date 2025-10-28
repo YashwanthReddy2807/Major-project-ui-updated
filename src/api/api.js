@@ -37,7 +37,14 @@ export async function loginUser(accountNumber, pin, faceImageBase64) {
 }
 
 // Fund Transfer
-export async function transferFunds(fromAccount, toAccount, amount, sessionToken, faceImageBase64 = "") {
+export async function transferFunds(
+  fromAccount,
+  toAccount,
+  amount,
+  sessionToken,
+  faceImageBase64 = "",
+  userIp = "Unknown" // 👈 Add userIp parameter
+) {
   const res = await fetch(`${API_BASE}/transfer`, {
     method: "POST",
     headers: {
@@ -49,20 +56,24 @@ export async function transferFunds(fromAccount, toAccount, amount, sessionToken
       to_account: toAccount,
       amount,
       face_image_base64: faceImageBase64,
+      user_ip: userIp, // 👈 Send real client IP to backend
     }),
   });
 
   const lambdaResponse = await res.json();
 
-  // Parse the nested body
+  // Parse the nested body (Lambda proxy integration)
   let data;
   try {
-    data = JSON.parse(lambdaResponse.body);
+    data =
+      typeof lambdaResponse.body === "string"
+        ? JSON.parse(lambdaResponse.body)
+        : lambdaResponse.body;
   } catch (err) {
     data = { message: "Invalid response from server" };
   }
 
-  // Throw error for non-200 responses
+  // Handle Lambda errors
   if (lambdaResponse.statusCode >= 400) {
     throw new Error(data.message || "Transfer failed");
   }
