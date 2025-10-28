@@ -8,7 +8,6 @@ import {
 } from "../api/api";
 
 const Dashboard = ({ sessionToken, accountNumber, onLogout }) => {
-  // ---------------- State ----------------
   const [transferTo, setTransferTo] = useState("");
   const [transferAmount, setTransferAmount] = useState("");
   const [sentTransactions, setSentTransactions] = useState([]);
@@ -19,12 +18,10 @@ const Dashboard = ({ sessionToken, accountNumber, onLogout }) => {
   const [loading, setLoading] = useState(false);
   const [fullName, setFullName] = useState("");
   const [balance, setBalance] = useState("");
-  const [expandedCard, setExpandedCard] = useState(""); // For slide-down cards
-
+  const [expandedCard, setExpandedCard] = useState("");
   const videoRef = useRef(null);
   const [faceImageBase64, setFaceImageBase64] = useState("");
 
-  // ---------------- Load User Info ----------------
   const loadUserInfo = async () => {
     try {
       const res = await getUserInfo(sessionToken, accountNumber);
@@ -41,7 +38,6 @@ const Dashboard = ({ sessionToken, accountNumber, onLogout }) => {
     }
   };
 
-  // ---------------- Load Transactions ----------------
   const loadTransactions = async () => {
     try {
       const res = await getTransactions(sessionToken, accountNumber);
@@ -64,7 +60,7 @@ const Dashboard = ({ sessionToken, accountNumber, onLogout }) => {
     }
   }, [sessionToken, accountNumber]);
 
-  // ---------------- Webcam Setup ----------------
+  // Webcam setup
   useEffect(() => {
     navigator.mediaDevices
       .getUserMedia({ video: true })
@@ -92,7 +88,7 @@ const Dashboard = ({ sessionToken, accountNumber, onLogout }) => {
     setMessage("✅ Face image captured.");
   };
 
-  // ---------------- Transfer Funds ----------------
+  // ---- UPDATED TRANSFER FUNCTION ----
   const handleTransfer = async () => {
     if (!faceImageBase64) {
       alert("Please capture your face image for verification");
@@ -107,19 +103,24 @@ const Dashboard = ({ sessionToken, accountNumber, onLogout }) => {
     setMessage("");
 
     try {
+      // ✅ Get user's real public IP
+      const ipRes = await fetch("https://api.ipify.org?format=json");
+      const ipData = await ipRes.json();
+      const userIp = ipData.ip;
+
       const data = await transferFunds(
         accountNumber,
         transferTo,
         transferAmount,
         sessionToken,
-        faceImageBase64
+        faceImageBase64,
+        userIp // 👈 pass to backend
       );
-      alert(data.message || "Transfer successful");
 
+      alert(data.message || "Transfer successful");
       setTransferTo("");
       setTransferAmount("");
       setFaceImageBase64("");
-
       await loadTransactions();
       await loadUserInfo();
     } catch (err) {
@@ -129,7 +130,6 @@ const Dashboard = ({ sessionToken, accountNumber, onLogout }) => {
     setLoading(false);
   };
 
-  // ---------------- Change PIN ----------------
   const handleChangePin = async () => {
     if (!email || !newPin) {
       alert("Please enter your new PIN.");
@@ -155,10 +155,8 @@ const Dashboard = ({ sessionToken, accountNumber, onLogout }) => {
     setLoading(false);
   };
 
-  // ---------------- VPN Detection ----------------
   useEffect(() => {
     if (!accountNumber || !email) return;
-
     const checkVPN = async () => {
       try {
         const res = await vpnCheck(accountNumber, email);
@@ -178,12 +176,10 @@ const Dashboard = ({ sessionToken, accountNumber, onLogout }) => {
     return () => clearInterval(interval);
   }, [accountNumber, email, onLogout]);
 
-  // ---------------- Toggle Card ----------------
   const toggleCard = (card) => {
     setExpandedCard(expandedCard === card ? "" : card);
   };
 
-  // ---------------- UI ----------------
   return (
     <div style={styles.page}>
       <div style={styles.container}>
@@ -223,19 +219,16 @@ const Dashboard = ({ sessionToken, accountNumber, onLogout }) => {
               style={styles.input}
             />
 
-            {/* Webcam */}
             <div style={{ textAlign: "center", margin: "20px 0" }}>
               <div style={styles.webcamWrapper}>
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  style={styles.video}
-                />
+                <video ref={videoRef} autoPlay style={styles.video} />
               </div>
               <button style={styles.button} onClick={captureFaceImage}>
                 Capture Face
               </button>
-              {faceImageBase64 && <p style={{ fontSize: "13px" }}>Face image ✅</p>}
+              {faceImageBase64 && (
+                <p style={{ fontSize: "13px" }}>Face image ✅</p>
+              )}
             </div>
 
             <button
@@ -248,7 +241,7 @@ const Dashboard = ({ sessionToken, accountNumber, onLogout }) => {
           </div>
         </div>
 
-        {/* Sent Transactions Card */}
+        {/* Sent Transactions */}
         <div style={styles.card}>
           <div style={styles.cardHeader} onClick={() => toggleCard("sent")}>
             📤 Sent Transactions
@@ -274,7 +267,7 @@ const Dashboard = ({ sessionToken, accountNumber, onLogout }) => {
           </div>
         </div>
 
-        {/* Received Transactions Card */}
+        {/* Received Transactions */}
         <div style={styles.card}>
           <div style={styles.cardHeader} onClick={() => toggleCard("received")}>
             📥 Received Transactions
@@ -300,7 +293,7 @@ const Dashboard = ({ sessionToken, accountNumber, onLogout }) => {
           </div>
         </div>
 
-        {/* Change PIN Card */}
+        {/* Change PIN */}
         <div style={styles.card}>
           <div style={styles.cardHeader} onClick={() => toggleCard("pin")}>
             🔑 Change PIN
@@ -346,7 +339,6 @@ const Dashboard = ({ sessionToken, accountNumber, onLogout }) => {
   );
 };
 
-// Reusable styles
 const styles = {
   page: {
     minHeight: "100vh",
